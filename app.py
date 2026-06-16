@@ -29,8 +29,6 @@ st.write(
 client = OpenAI(
     api_key=st.secrets["OPENAI_API_KEY"]
 )
-    
-    
 
 # -------------------------
 # LOAD SEMANTIC MODEL
@@ -247,38 +245,107 @@ CV:
 
 
 # -------------------------
-# CV QUALITY
+# CV QUALITY GRADER
 # -------------------------
 
 def cv_quality(cv):
 
+    score = 0
+
+
     words = len(cv.split())
 
 
-    if words > 600:
+    # Length check
+    if 400 <= words <= 900:
+        score += 20
 
-        return "A"
+    elif words > 250:
+        score += 10
 
 
-    elif words > 300:
+    # Achievement language
+    action_words = [
+        "managed",
+        "led",
+        "developed",
+        "created",
+        "implemented",
+        "improved",
+        "delivered",
+        "coordinated",
+        "increased",
+        "reduced"
+    ]
 
-        return "B"
 
+    action_count = sum(
+        cv.lower().count(word)
+        for word in action_words
+    )
+
+
+    if action_count >= 8:
+        score += 25
+
+    elif action_count >= 4:
+        score += 15
+
+
+    # Evidence of impact
+    if any(
+        char.isdigit()
+        for char in cv
+    ):
+        score += 20
+
+
+    # Structure
+    sections = [
+        "experience",
+        "education",
+        "skills",
+        "profile"
+    ]
+
+
+    section_count = sum(
+        section in cv.lower()
+        for section in sections
+    )
+
+
+    if section_count >= 3:
+        score += 20
+
+    else:
+        score += 10
+
+
+    # Professional detail
+    if len(cv.split("\n")) > 10:
+        score += 15
+
+
+
+    if score >= 80:
+
+        grade = "A"
+
+    elif score >= 60:
+
+        grade = "B"
 
     else:
 
-        return "C"
+        grade = "C"
+
+
+    return grade, score
+
+
 
 # -------------------------
-# RUN ANALYSIS
-# -------------------------
-
-st.info("AI analysis uses API credits. Avoid repeated tests.")
-
-if st.button("Analyse CV"):
-
-
-    # -------------------------
 # RUN ANALYSIS
 # -------------------------
 
@@ -305,32 +372,32 @@ if st.button("Analyse CV"):
             st.stop()
 
 
+
         cleaned_cv = clean_text(cv)
 
         cleaned_job = clean_text(job)
 
 
+
         semantic_score = semantic_match(
-
             cleaned_cv,
-
             cleaned_job
-
         )
+
 
 
         ai_analysis = evaluate_cv(
-
             cv,
-
             job
-
         )
 
 
-        st.subheader(
-            "Match Results"
-        )
+
+        grade, quality_score = cv_quality(cv)
+
+
+
+        st.subheader("Match Results")
 
 
         st.write(
@@ -338,46 +405,50 @@ if st.button("Analyse CV"):
         )
 
 
-        st.subheader(
-            "Capability Analysis"
-        )
+
+        st.subheader("Capability Analysis")
 
 
         st.write(
             ai_analysis
         )
 
-st.subheader(
-    "CV Quality"
-)
 
 
-grade = cv_quality(cv)
+        st.subheader("CV Quality")
 
 
-st.write(
-    f"Grade: {grade}"
-)
+        st.write(
+            f"Grade: {grade} ({quality_score}/100)"
+        )
 
 
-if grade == "A":
 
-    st.write(
-        "This CV demonstrates strong structure, detail, and professional presentation. "
-        "It provides sufficient evidence of experience, skills, and achievements, making it easy for recruiters to identify relevant strengths."
-    )
+        if grade == "A":
 
-
-elif grade == "B":
-
-    st.write(
-        "This CV has a solid foundation but could be improved through clearer achievements, stronger action verbs, and more measurable outcomes."
-    )
+            st.write(
+                "This CV demonstrates strong structure, detail, and professional presentation. "
+                "It provides sufficient evidence of experience, skills, and achievements, making it easy for recruiters to identify relevant strengths."
+            )
 
 
-else:
+        elif grade == "B":
 
-    st.write(
-        "This CV may need improvement in structure, detail, and evidence of skills. "
-        "Adding achievements, clearer responsibilities, and stronger role descriptions would improve recruiter readability."
-    )
+            st.write(
+                "This CV has a solid foundation but could be improved through clearer achievements, stronger action verbs, and more measurable outcomes."
+            )
+
+
+        else:
+
+            st.write(
+                "This CV would benefit from stronger structure, clearer evidence of skills, and more detailed achievements."
+            )
+
+
+    else:
+
+
+        st.error(
+            "Please paste both CV and job description"
+        )
